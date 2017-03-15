@@ -1,6 +1,9 @@
 package com.example.luhaiyang.ffplay;
 
 import android.os.Bundle;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.widget.TextView;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -18,10 +21,39 @@ public class MainActivity extends AppCompatActivity {
         System.loadLibrary("ijkffmpeg");
     }
 
+
+    SurfaceHolder mSurfaceHolder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        SurfaceView surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+        mSurfaceHolder = surfaceView.getHolder();
+        mSurfaceHolder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                final Surface surface = holder.getSurface();
+                new Thread(){
+                    @Override
+                    public void run() {
+                        super.run();
+                        play(surface);
+                    }
+                }.start();
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+
+            }
+        });
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -36,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Example of a call to a native method
         final TextView tv = (TextView) findViewById(R.id.sample_text);
-        new Thread(){
+        new Thread() {
             @Override
             public void run() {
                 super.run();
@@ -79,4 +111,6 @@ public class MainActivity extends AppCompatActivity {
      * which is packaged with this application.
      */
     public native String stringFromJNI();
+
+    public native void play(Surface surface);
 }

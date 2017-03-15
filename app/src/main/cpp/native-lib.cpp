@@ -4,7 +4,6 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 
-
 #define  LOG_TAG    "gplayer"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
@@ -13,12 +12,18 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
-
 JNIEXPORT jstring JNICALL
 Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
         JNIEnv *env,
         jobject) {
     std::string hello = "Hello from Gplayer++";
+    return env->NewStringUTF(hello.c_str());
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_luhaiyang_ffplay_MainActivity_play(
+        JNIEnv *env, jobject thiz, jobject jsurface) {
+
     av_register_all();
     char *hls = "http://devimages.apple.com.edgekey.net/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
 
@@ -28,15 +33,13 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
     //2 open stream
     if (avformat_open_input(&avFormatContext, hls, NULL, NULL) != 0) {
         LOGD("333 open stream failed %s", hls);
-        hello = "can not open stream";
-        return env->NewStringUTF(hello.c_str());;
+        return;
     }
 
     //3 find stream info
     if (avformat_find_stream_info(avFormatContext, NULL) < 0) {
         LOGD("333 find stream info failed");
-        hello = "can not find stream info";
-        return env->NewStringUTF(hello.c_str());
+        return;
     }
 
     int videoStream = -1, audioStream = -1, i;
@@ -66,8 +69,7 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
 
     if (videoStream == -1) {
         LOGD("333 find video stream failed");
-        hello = "can not find video stream";
-        return env->NewStringUTF(hello.c_str());
+        return;
     }
 
     LOGD("333 find video stream %d", videoStream);
@@ -77,12 +79,12 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
 
     if (avCodec == NULL) {
         LOGD("333 find codec failed");
-        return env->NewStringUTF(hello.c_str());
+        return;
     }
 
     if (avcodec_open2(avCodecContext, avCodec, NULL) < 0) {
         LOGD("333 open codec failed");
-        return env->NewStringUTF(hello.c_str());
+        return;
     }
 
 
@@ -104,6 +106,10 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
                                                    NULL,
                                                    NULL);
 
+    ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, jsurface);
+    ANativeWindow_setBuffersGeometry(nativeWindow, avCodecContext->width, avCodecContext->height,
+                                     WINDOW_FORMAT_RGBA_8888);
+    ANativeWindow_Buffer windowBuffer;
     int frameFinished;
     AVPacket packet;
     LOGD("333 av_read_frame");
@@ -111,9 +117,27 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
         if (packet.stream_index == videoStream) {
             avcodec_decode_video2(avCodecContext, avFrame, &frameFinished, &packet);
             if (frameFinished) {
-//                LOGD("333 frame decoded finished");
+                ANativeWindow_lock(nativeWindow, &windowBuffer, 0);
+                sws_scale(swsContext, (uint8_t const *const *) avFrame->data,
+                          avFrame->linesize, 0, avCodecContext->height,
+                          avFrameRGB->data, avFrameRGB->linesize);
+
+
+                uint8_t *dst = (uint8_t *) windowBuffer.bits;
+                int dstStride = windowBuffer.stride * 4;
+                uint8_t *src = (avFrameRGB->data[0]);
+                int srcStride = avFrameRGB->linesize[0];
+
+                // 由于window的stride和帧的stride不同,因此需要逐行复制
+                int h;
+                for (h = 0; h < avCodecContext->height; h++) {
+                    memcpy(dst + h * dstStride, src + h * srcStride, srcStride);
+                }
+
+                ANativeWindow_unlockAndPost(nativeWindow);
             }
         }
+        av_packet_unref(&packet);
     }
 
     av_free(buffer);
@@ -124,6 +148,6 @@ Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
     avcodec_close(avCodecContext);
     avformat_close_input(&avFormatContext);
 
-    return env->NewStringUTF(hello.c_str());
 }
+
 }
