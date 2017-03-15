@@ -72,8 +72,6 @@ Java_com_example_luhaiyang_ffplay_MainActivity_play(
         return;
     }
 
-    LOGD("333 find video stream %d", videoStream);
-
     AVCodecContext *avCodecContext = avFormatContext->streams[videoStream]->codec;
     AVCodec *avCodec = avcodec_find_decoder(avCodecContext->codec_id);
 
@@ -87,6 +85,8 @@ Java_com_example_luhaiyang_ffplay_MainActivity_play(
         return;
     }
 
+    LOGD("333 find video stream %d width = %d , height = %d", videoStream, avCodecContext->width,
+         avCodecContext->height);
 
     AVFrame *avFrame = av_frame_alloc();
     AVFrame *avFrameRGB = av_frame_alloc();
