@@ -12,6 +12,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
+#include <libsdl/SDL.h>
 JNIEXPORT jstring JNICALL
 Java_com_example_luhaiyang_ffplay_MainActivity_stringFromJNI(
         JNIEnv *env,
@@ -112,6 +113,9 @@ Java_com_example_luhaiyang_ffplay_MainActivity_play(
     ANativeWindow_Buffer windowBuffer;
     int frameFinished;
     AVPacket packet;
+
+    SDL_PauseAudio(0);
+
     LOGD("333 av_read_frame");
     while (av_read_frame(avFormatContext, &packet) >= 0) {
         if (packet.stream_index == videoStream) {
