@@ -149,6 +149,7 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
 }
 
 void audio_callback(void *userdata, Uint8 *stream, int len) {
+    LOGD("444 audio_callback called");
     AVCodecContext *aCodecCtx = (AVCodecContext *) userdata;
     int len1, audio_size;
 
@@ -179,8 +180,8 @@ void audio_callback(void *userdata, Uint8 *stream, int len) {
     }
 }
 
-JNIEXPORT void JNICALL Java_com_example_luhaiyang_ffplay_MainActivity_play(
-        JNIEnv *env, jobject thiz, jobject jsurface) {
+JNIEXPORT void JNICALL
+Java_com_example_luhaiyang_ffplay_MainActivity_play(JNIEnv *env, jobject thiz, jobject jsurface) {
 
     av_register_all();
     SDL_Init(SDL_INIT_AUDIO);
@@ -239,7 +240,7 @@ JNIEXPORT void JNICALL Java_com_example_luhaiyang_ffplay_MainActivity_play(
         return;
     }
 
-    SDL_AudioSpec wanted;
+    SDL_AudioSpec wanted, get;
     wanted.freq = avCodecContext->sample_rate;
     wanted.format = AUDIO_S16SYS;
     wanted.channels = avCodecContext->channels;
@@ -247,16 +248,22 @@ JNIEXPORT void JNICALL Java_com_example_luhaiyang_ffplay_MainActivity_play(
     wanted.samples = 1024;
     wanted.callback = audio_callback;
     wanted.userdata = avCodecContext;
-    SDL_OpenAudio(&wanted, NULL);
+    int audio_ready = SDL_OpenAudio(&wanted, &get);
 
     if (avcodec_open2(avCodecContext, avCodec, NULL) < 0) {
         LOGD("333 open codec failed");
         return;
     }
 
-    // audio_st = pFormatCtx->streams[index]
-    packet_queue_init(&audioq);
-    SDL_PauseAudio(0);
+    if (audio_ready == 0) {
+        LOGD("444 SDL_OpenAudio = %d ok", audio_ready);
+        packet_queue_init(&audioq);
+        SDL_PauseAudio(0);
+        LOGD("444 SDL_PauseAudio(0);");
+    } else {
+        LOGD("444 SDL_OpenAudio = %d failed", audio_ready);
+    }
+
 
     LOGD("333 find video stream %d width = %d , height = %d", videoStream, avCodecContext->width,
          avCodecContext->height);
